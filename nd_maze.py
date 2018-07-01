@@ -1,21 +1,21 @@
 import random
-
+import sys
 
 class MazeNodeND:
     def __init__(self, data):
         self.data = data
         self.edges = {}     # other_junc |-> edge_weight
 
-
 class MazeGraphND:
-    def __init__(self, dimension_vector, solve_method="prims"):
+    def __init__(self, dimension_vector, gen_method="prims"):
         """
         init() creates a new random MazeGraphND with dimensions of dimension_vector
         
-        @param:     dimension_vector    the nd vector containing the size of MazeGraphND in each dimension
-                                        must be of the form [n_0, n_1, n_2, n_3, ... n_(n-1)], n_i == int and n_1 > 1
-                    solve_method        "prims" for a solution based on prims algorithm 
-                                        or "djs" for a solution based on disjoint-set
+        @param:     dimension_vector    the nd vector containing the size of MazeGraphND 
+                                        in each dimension; must be of the form:
+                                        [n_0, n_1, n_2, n_3, ... n_(n-1)], n_i == int and n_i > 1
+                    gen_method          "prims" for a mazegen based on prims algorithm 
+                                        or "djs" for a mazegen based on disjoint-set
         """
         
         # intialize the empty maze
@@ -23,17 +23,18 @@ class MazeGraphND:
             raise ValueError("Improper dimension vector passed to NDMazeGraph constructor")
         self.dims = dimension_vector
         self.junctions = self.init_grid()
+        self.start = self.select_junction([0 for dim in self.dims])
         
         # create the connections in the maze
         # If there is a connection between two junctions,
         # the user can travel between them
-        self.connections = []
-        if solve_method == "prims":
-            self.solve_prims()
-        elif solve_method == "djs":
-            self.solve_djs()
+        self.connections = {}
+        if gen_method == "prims":
+            self.generate_prims()
+        elif gen_method == "djs":
+            self.generate_prims()
         else:
-            raise ValueError("Invalid solve method. Choose one of 'prims' or 'djs'")
+            raise ValueError("Invalid generate method. Choose one of 'prims' or 'djs'")
 
 
     def init_grid(self):
@@ -54,22 +55,22 @@ class MazeGraphND:
 
     def select_junction(self, pos):
         """
-        select_junction() returns the value at pos in self.junctions. Implemented recursively.
+        select_junction() returns the MazeNodeND at pos in self.junctions
             
         @param:     pos     the nd vector pointing to the junction in self.junctions to select
-        
-        @return:    val     the value at pos in self.junctions
+        @return:    junc    the MazeNodeND at pos in self.junctions
         """
         
-        val = self.junctions
-        for p in pos:
-            val = val[p]
-        return val.data
+        junc = self.junctions
+        for p in reversed(pos):
+            junc = junc[p]
+        return junc
 
 
     def get_adjacent(self, pos):
         """
-        get_adjacent() returns a list of all junctions directly adjacent (not diagonal) to pos in nd space
+        get_adjacent() returns a list of all junctions directly 
+                        adjacent (not diagonal) to pos in nd space
             
         @return:    adj     the list of adjacent junctions
         """
@@ -84,46 +85,68 @@ class MazeGraphND:
             pos[i] -= 1
         return adj
     
+    def randomize_edge_weights(self, d, i, p):
+        if i < len(d)-1:
+            for k in range(d[i]):
+                self.randomize_edge_weights(d, i+1, p+[k])
+        else:
+            for k in range(d[i]):
+                junc = p+[k]
+                node = self.select_junction(junc)
+                nbrs = self.get_adjacent(junc)
+                for neighbor in nbrs:
+                    node.edges[neighbor] = random.random()
 
-    def solve_prims(self):
-        """
-        solve_prims() generates neighbors in this MazeGraphND such there is at least one path from 
-                        the START to TERMINAL node. Generates a random number for each edge in the 
-                        network, then runs Prim's algorithm to create an MST. There is guaranteed 
-                        to be a path u->v for all u,v in MST(G) for a connected undirected graph G.
-                        Then when Prim's terminates, there must exist a path START->TERMINAL
-        """
-        
-        def randomize_edge_weights(d, i, p):
-            if i < len(d)-1:
-                for dim in range(d[i]):
-                    randomize_edge_weights(d, i+1, p+(dim, ))
-            else:
-                for dim in range(d[i]):
-                    junc = p+(dim, )
-                    node = self.select_junction(junc)
-                    nbrs = self.get_adjacent(junc)
-                    for n in nbrs:
-                        neighbor = select_junction(n)
-                        node.edges[neighbor] = random.random()   
-                    print(node.edges)              
-        
-        randomize_edge_weights(self.dims, 0, tuple())
-        
-        used_vertices = set()
-        used_edges = set()
-        avail_edges = []
+    def add_connection(self, node, neighbor):
+        try:
+            self.connections[node].append(neighbor)
+        except KeyError:
+            self.connections[node] = [neighbor]
+        try:
+            self.connections[neighbor].append(node)
+        except KeyError:
+            self.connections[neighbor] = [node]
 
+    def generate_prims(self):
+        """
+        generate_prims() generates neighbors in this MazeGraphND such there is at least one 
+                        path from the START to TERMINAL node. Generates a random number for 
+                        each edge in the network, then runs Prim's algorithm to create an MST.
+                        There is guaranteed to be a path u->v for all u,v in MST(G) for a
+                        connected undirected graph G. Then when Prim's terminates, there must
+                        exist a path START->TERMINAL
+        """
+        self.randomize_edge_weights(self.dims, 0, list())
+        self.connections = {}
+        
+        all_verts = 1
+        for d in self.dims:
+            all_verts *= d
+        
+        tree = {self.start}
+        while len(tree) < all_verts:
+            min_edge, min_weight = tuple(), sys.maxsize
+            for node in tree:
+                for neighbor, weight in node.edges.items():
+                    if neighbor in tree:
+                        continue
+                    if weight < min_weight:
+                        min_edge = (node, neighbor)
+                        min_weight = weight
+            node, neighbor = min_edge
+            tree.add(neighbor)
+            self.add_connection(node, neighbor)
+        # print({k.data:[v.data for v in vlist] for k, vlist in self.connections.items()})        
 
-    def solve_djs(self):
+    def generate_djs(self):
         """
-        solve_djs() generates neighbors in this MazeGraphND such there is at least one path from 
-                    the START to TERMINAL node. Uses a disjount set heuristic; initialize each node 
-                    as a disjoint set. Place random edges until there is only one DJS covering all 
-                    nodes. If a DJS covers nodes V' and u,v in V', then u->v. Then if G=(V,E) and 
-                    DJS covers V, there must exist a path START->TERMINAL
+        generate_djs() generates neighbors in this MazeGraphND such there is at least one path
+                    from the START to TERMINAL node. Uses a disjount set heuristic; initialize
+                    each node as a disjoint set. Place random edges until there is only one DJS
+                    covering all nodes. If a DJS covers nodes V' and u,v in V', then u->v. Then
+                    if G=(V,E) and DJS covers V, there must exist a path START->TERMINAL
         """
-        pass
+        self.randomize_edge_weights(self.dims, 0, list())
 
 
     def draw_junctions(self):
