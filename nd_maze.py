@@ -99,13 +99,13 @@ class MazeGraphND:
 
     def add_connection(self, node, neighbor):
         try:
-            self.connections[node].append(neighbor)
+            self.connections[node.data].append(neighbor.data)
         except KeyError:
-            self.connections[node] = [neighbor]
+            self.connections[node.data] = [neighbor.data]
         try:
-            self.connections[neighbor].append(node)
+            self.connections[neighbor.data].append(node.data)
         except KeyError:
-            self.connections[neighbor] = [node]
+            self.connections[neighbor.data] = [node.data]
 
     def generate_prims(self):
         """
@@ -135,8 +135,7 @@ class MazeGraphND:
                         min_weight = weight
             node, neighbor = min_edge
             tree.add(neighbor)
-            self.add_connection(node, neighbor)
-        # print({k.data:[v.data for v in vlist] for k, vlist in self.connections.items()})        
+            self.add_connection(node, neighbor)  
 
     def generate_djs(self):
         """
@@ -146,8 +145,28 @@ class MazeGraphND:
                     covering all nodes. If a DJS covers nodes V' and u,v in V', then u->v. Then
                     if G=(V,E) and DJS covers V, there must exist a path START->TERMINAL
         """
+        
+        from disjoint_set import DisjointSet
+        
+        def seed_djs(d, i, p):
+            ret = []
+            if i < len(d)-1:
+                for k in range(d[i]):
+                    ret.extend(seed_djs(d, i+1, p+[k]))
+            else:
+                for k in range(d[i]):
+                    ret.extend(DisjointSet(self.select_junction(p+[k])))
+            return ret
+        
         self.randomize_edge_weights(self.dims, 0, list())
-
+        djsets = seed_djs(self.dims, 0, list())
+        while len(djsets) > 1:
+            nextsets = []
+            for djs in djsets:
+                # pick random edge in djs and merge this djs 
+                # to the djs containing terminal junction
+                # and add_connection(edge)
+            djsets = nextsets 
 
     def draw_junctions(self):
         """
