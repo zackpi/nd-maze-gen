@@ -2,54 +2,64 @@ class DisjointSet:
     def __init__(self, data):
         self.data = data
         self.parent = self
-        self.children = []
         self.dim = 1
 
     def union(self, other):
-        if self == other:
-            return self.rep()
-        #self.parent = other     # wrong in some way
-        other.children.append(self.rep())
-        #other = self.rep()
-        #other.dim += self.dim
-        return other.rep()
+        # combines the djs containing self and other
+        srep, orep = self.rep(), other.rep()
+        if srep is orep:
+            return
+        srep.parent = orep
+        orep.dim += srep.dim
 
     def rep(self):
+        # returns the representative of the djs containing self
+        # and compresses the path from self to the rep        
         A = self
-        chain = A.children
-        while A.parent != A:
+        chain = [A]
+        while A.parent is not A:
             A = A.parent
-            chain.extend(A.children)
+            chain.append(A)
         for C in chain:
             C.parent = A
-            C.children = []
         return A
-
-    def cardinality(self):
+    
+    def __len__(self):
         return self.rep().dim
 
     def __str__(self):
         return "<" + str(self.rep().data) + ">"
+    
+    def __eq__(self, other):
+        return self.rep() is other.rep()
         
 if __name__=="__main__":
     A, B, C = DisjointSet("A"), DisjointSet("B"), DisjointSet("C")
-    D, E, F = DisjointSet("D"), DisjointSet("E"), DisjointSet("F")
-    G, H, I = DisjointSet("G"), DisjointSet("H"), DisjointSet("I")
+    D, E = DisjointSet("D"), DisjointSet("E")
     
     print(A, B, C, D, E)
-    print([str(a) for a in A.children], [str(b) for b in B.children], [str(c) for c in C.children], [str(d) for d in D.children], [str(e) for e in E.children])
+    print(len(A), len(B), len(C), len(D), len(E))
+    print(A==B, A==C, A==D, A==E)
     A.union(B)
+    
     print(A, B, C, D, E)
-    print([str(a) for a in A.children], [str(b) for b in B.children], [str(c) for c in C.children], [str(d) for d in D.children], [str(e) for e in E.children])
+    print(len(A), len(B), len(C), len(D), len(E))
+    print(A==B, A==C, A==D, A==E)
     B.union(C)
+    
     print(A, B, C, D, E)
-    print([str(a) for a in A.children], [str(b) for b in B.children], [str(c) for c in C.children], [str(d) for d in D.children], [str(e) for e in E.children])
+    print(len(A), len(B), len(C), len(D), len(E))
+    print(A==B, A==C, A==D, A==E)
     D.union(E)
+    
     print(A, B, C, D, E)
-    print([str(a) for a in A.children], [str(b) for b in B.children], [str(c) for c in C.children], [str(d) for d in D.children], [str(e) for e in E.children])
+    print(len(A), len(B), len(C), len(D), len(E))
+    print(A==B, A==C, A==D, A==E)
     C.union(D)
+    
     print(A, B, C, D, E)
-    print([str(a) for a in A.children], [str(b) for b in B.children], [str(c) for c in C.children], [str(d) for d in D.children], [str(e) for e in E.children])
+    print(len(A), len(B), len(C), len(D), len(E))
+    print(A==B, A==C, A==D, A==E)
     
     
 
