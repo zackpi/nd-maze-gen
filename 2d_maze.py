@@ -54,16 +54,17 @@ if __name__=="__main__":
     import sys
     
     if len(sys.argv) > 1:
-        assert len(sys.argv) == 3, "Please specify a width and height"
-        w,h = sys.argv[1:]
+        assert len(sys.argv) >= 3, "Please specify a width and height, and a generation method"
+        w,h = sys.argv[1:3]
         try:
             width, height = int(w), int(h)
         except ValueError:
             print("Width and height should be passed as integers")
             sys.exit(0)
-        m = MazeGraph2D(width, height)
+        method = "prims" if len(sys.argv) == 3 else sys.argv[3]
+        m = MazeGraph2D(width, height, method)
     else:
-        m = MazeGraph2D(80, 40)
+        m = MazeGraph2D(40, 20)
     print(m)
 
 

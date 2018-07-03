@@ -32,7 +32,7 @@ class MazeGraphND:
         if gen_method == "prims":
             self.generate_prims()
         elif gen_method == "djs":
-            self.generate_prims()
+            self.generate_djs()
         else:
             raise ValueError("Invalid generate method. Choose one of 'prims' or 'djs'")
 
@@ -149,24 +149,36 @@ class MazeGraphND:
         from disjoint_set import DisjointSet
         
         def seed_djs(d, i, p):
-            ret = []
+            ret = {}
             if i < len(d)-1:
                 for k in range(d[i]):
-                    ret.extend(seed_djs(d, i+1, p+[k]))
+                    ret.update(seed_djs(d, i+1, p+[k]))
             else:
                 for k in range(d[i]):
-                    ret.extend(DisjointSet(self.select_junction(p+[k])))
+                    node = self.select_junction(p+[k])
+                    ret[node] = DisjointSet(node)
             return ret
         
         self.randomize_edge_weights(self.dims, 0, list())
         djsets = seed_djs(self.dims, 0, list())
-        while len(djsets) > 1:
-            nextsets = []
-            for djs in djsets:
-                # pick random edge in djs and merge this djs 
-                # to the djs containing terminal junction
-                # and add_connection(edge)
-            djsets = nextsets 
+        nodes = tuple(djsets.keys())
+        
+        while len(djsets[self.start]) < len(djsets):
+            
+            while True:
+                node = random.choice(nodes)
+                neighbor = node
+                nbrs = tuple(node.edges.keys())
+                seen = set()
+                while djsets[node] == djsets[neighbor] and len(seen) < len(nbrs):
+                    neighbor = random.choice(nbrs)
+                    seen.add(neighbor)
+                if len(seen) < len(nbrs):
+                    break
+                
+            self.add_connection(node, neighbor)
+            node_djs, nbr_djs = djsets[node], djsets[neighbor]
+            node_djs.union(nbr_djs)
 
     def draw_junctions(self):
         """
@@ -207,8 +219,7 @@ class MazeGraphND:
         return draw_junc_recurse("Dimensions: " + str(self.dims), self.junctions, len(self.dims), 0)
    
     def __str__(self):
-        return self.draw_junctions()
-        
-
+        return self.draw_junctions()    
+    
 
 mazegraphnd = MazeGraphND([4,3,2])
